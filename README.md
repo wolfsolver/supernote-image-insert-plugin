@@ -1,3 +1,20 @@
-# Insert Image for Supernote
+# Supernote Image Inserter Plugin
 
-a simple insert image into current note
+A lightweight, high-performance plugin for Supernote devices that enables users to browse the local filesystem and insert images directly into their notes. This plugin fills the gap for a missing native file-picking interface in the current SDK.
+
+## Key Features
+* **Zero-Click Entry**: The plugin launches directly into the file explorer for a seamless workflow.
+* **Optimized for E-Ink**: Features high-contrast UI, large touch targets for the stylus, and clean typography.
+* **Smart Navigation**: 
+    * Browse directories starting from `/sdcard`.
+    * Automatically filters for supported formats (`.jpg`, `.jpeg`, `.png`, `.bmp`).
+    * Hides system files and hidden directories (starting with `.`) for a cleaner view.
+* **Auto-Close**: Automatically closes the plugin and returns to the note view immediately after an image is selected.
+
+
+
+## Prerequisites
+* **React Native**: 0.79.2
+* **SDK**: `sn-plugin-lib`
+* **Dependencies**: `react-native-fs`
+
