@@ -1,43 +1,42 @@
-/**
- * Simple Plugin
- *
- * @format
- */
-
-import React from 'react';
-import {
-  StatusBar,
-  StyleSheet,
-  Text,
-  useColorScheme,
-  View,
-  Pressable,
+import React, { useState } from 'react';
+import { 
+  View, 
+  StyleSheet, 
+  useColorScheme, 
+  Pressable, 
+  Text, 
+  StatusBar 
 } from 'react-native';
-import { PluginManager } from 'sn-plugin-lib';
+import { FilePicker } from './components/FilePicker'; 
+import { PluginManager, PluginNoteAPI } from 'sn-plugin-lib';
 
-/**
- * Plugin View
- * Displays Hello World text in the center of the screen
- */
 function App(): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
+  // Rimosso useColorScheme se ti dava problemi, altrimenti forziamo 'light'
+  const isDarkMode = false; 
 
   const handleClose = () => {
     PluginManager.closePluginView();
   };
 
+  const handleImageSelected = (path: string) => {
+    if (PluginNoteAPI) {
+      PluginNoteAPI.insertImage(path);
+      // Chiudiamo il plugin dopo l'inserimento per tornare alla nota
+      handleClose();
+    }
+  };
+
   return (
-    <View style={styles.container}>
-      <Pressable style={styles.closeButton} onPress={handleClose}>
-        <Text style={[styles.closeText, {color: isDarkMode ? '#ffffff' : '#000000'}]}>✕</Text>
-      </Pressable>
-      <StatusBar
-        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
-        backgroundColor={isDarkMode ? '#000000' : '#ffffff'}
+    <View style={[styles.container, { backgroundColor: '#ffffff' }]}>
+      <StatusBar barStyle="dark-content" />
+      
+      {/* Visualizziamo subito il FilePicker senza condizioni */}
+      <FilePicker 
+        onSelect={handleImageSelected} 
+        onClose={handleClose} 
+        initialDirectory="/sdcard"
       />
-      <Text style={[styles.helloText, {color: isDarkMode ? '#ffffff' : '#000000'}]}>
-        Hello World
-      </Text>
+
     </View>
   );
 }
@@ -45,26 +44,18 @@ function App(): React.JSX.Element {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#ffffff',
   },
   closeButton: {
     position: 'absolute',
-    top: 12,
-    right: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 16,
+    top: 10,
+    right: 15,
+    zIndex: 999, // Assicura che sia sopra la lista
+    padding: 10,
   },
   closeText: {
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  helloText: {
     fontSize: 24,
-    fontWeight: '600',
-    textAlign: 'center',
+    fontWeight: 'bold',
+    color: '#000000',
   },
 });
 

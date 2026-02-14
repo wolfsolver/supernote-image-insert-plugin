@@ -1,0 +1,1 @@
+adb push .\build\outputs\insert_image.snplg /storage/self/primary/Mystyle/Plugin/
