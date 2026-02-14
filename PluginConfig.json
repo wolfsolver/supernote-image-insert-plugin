@@ -2,9 +2,9 @@
     "pluginID":  "fvxsasc63mulsj57",
     "pluginKey":  "insert_image",
     "iconPath":  "./assets/insert_image.png",
-    "desc":  "A simple plugin for insert image into note",
-    "name":  "insert_image",
-    "versionCode":  "1",
-    "versionName":  "0.0.1",
+    "desc":  "A simple plugin for insert image into note\n\nPowered by Wolfsolver, website: https://github.com/wolfsolver/supernote-image-insert-plugin \n",
+    "name":  "Insert Image",
+    "versionCode":  "2",
+    "versionName":  "0.1.0",
     "jsMainPath":  "index"
 }

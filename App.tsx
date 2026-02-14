@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { FilePicker } from './components/FilePicker'; 
 import { PluginManager, PluginNoteAPI } from 'sn-plugin-lib';
+import config from './PluginConfig.json';
 
 function App(): React.JSX.Element {
   // Rimosso useColorScheme se ti dava problemi, altrimenti forziamo 'light'
@@ -34,8 +35,16 @@ function App(): React.JSX.Element {
       <FilePicker 
         onSelect={handleImageSelected} 
         onClose={handleClose} 
-        initialDirectory="/sdcard"
+//		initialDirectory={RNFS.ExternalStorageDirectoryPath} // Percorso dinamico
+//        showAllFolders={false}
       />
+
+            <View style={styles.footerContainer}>
+              <Text style={styles.footer}>
+                {config.name} v{config.versionName} by {config.author}
+              </Text>
+              
+            </View>
 
     </View>
   );
@@ -57,6 +66,8 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#000000',
   },
+  footerContainer: { marginTop: 20, alignItems: 'center' },
+  footer: { fontSize: 16, fontStyle: 'italic', color: '#666' },  
 });
 
 export default App;

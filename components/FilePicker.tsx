@@ -21,12 +21,18 @@ interface FilePickerProps {
   onSelect: (path: string) => void;
   onClose: () => void;
   initialDirectory?: string;
+  showAllFolders?: boolean;
 }
+
+
+// Elenco delle cartelle consentite quando showAllFolders è false
+const ALLOWED_ROOT_FOLDERS = ["Document", "EXPORT", "MyStyle", "Note", "SCREENSHOT", "INBOX"];
 
 export const FilePicker: React.FC<FilePickerProps> = ({ 
   onSelect, 
   onClose, 
-  initialDirectory = '/sdcard' 
+  initialDirectory = RNFS.ExternalStorageDirectoryPath,
+  showAllFolders = false
 }) => {
   const [currentPath, setCurrentPath] = useState(initialDirectory);
   const [items, setItems] = useState<{name: string, path: string, isDir: boolean}[]>([]);
@@ -44,7 +50,21 @@ export const FilePicker: React.FC<FilePickerProps> = ({
           path: item.path,
           isDir: item.isDirectory(),
         }))
-        .filter(item => !item.name.startsWith('.') && (item.isDir || /\.(jpg|jpeg|png|bmp)$/i.test(item.name)))
+	    .filter(item => {
+          // 1. Nascondi file/cartelle che iniziano con "."
+          if (item.name.startsWith('.')) return false;
+
+          if (item.isDir) {
+            // 2. Se siamo nella directory radice e showAllFolders è false, filtra
+            if (!showAllFolders && path === initialDirectory) {
+              return ALLOWED_ROOT_FOLDERS.includes(item.name);
+            }
+            return true;
+          }
+
+          // 3. Filtra solo immagini supportate
+          return /\.(jpg|jpeg|png|bmp)$/i.test(item.name);
+        })
         .sort((a, b) => (b.isDir === a.isDir ? a.name.localeCompare(b.name) : b.isDir ? 1 : -1));
 
       setItems(mappedItems);
