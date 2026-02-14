@@ -19,6 +19,8 @@ A lightweight, high-performance plugin for Supernote devices that enables users 
 
 ## Screenshot
 
+![folder](/screenshot/folder_navigation.png)
+
 ![file picker](/screenshot/file_picker.png)
 
 ![result](/screenshot/image_in_note.png)
