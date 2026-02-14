@@ -1,0 +1,10 @@
+﻿{
+    "pluginID":  "fvxsasc63mulsj57",
+    "pluginKey":  "insert_image",
+    "iconPath":  "",
+    "desc":  "A simple plugin for insert image into note",
+    "name":  "insert_image",
+    "versionCode":  "1",
+    "versionName":  "0.0.1",
+    "jsMainPath":  "index"
+}
