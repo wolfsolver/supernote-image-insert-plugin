@@ -1,1 +1,1 @@
-adb logcat -s ReactNativeJS:V
+adb logcat -v color ReactNativeJS:V *:E

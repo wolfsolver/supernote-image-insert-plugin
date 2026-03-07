@@ -10,6 +10,7 @@
     "test": "jest"
   },
   "dependencies": {
+    "@react-native-community/image-editor": "^4.3.0",
     "react": "19.0.0",
     "react-native": "0.79.2",
     "react-native-fs": "^2.20.0",

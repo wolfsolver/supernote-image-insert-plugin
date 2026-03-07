@@ -28,14 +28,14 @@ interface FilePickerProps {
 // Elenco delle cartelle consentite quando showAllFolders è false
 const ALLOWED_ROOT_FOLDERS = ["Document", "EXPORT", "MyStyle", "Note", "SCREENSHOT", "INBOX"];
 
-export const FilePicker: React.FC<FilePickerProps> = ({ 
-  onSelect, 
-  onClose, 
+export const FilePicker: React.FC<FilePickerProps> = ({
+  onSelect,
+  onClose,
   initialDirectory = RNFS.ExternalStorageDirectoryPath,
   showAllFolders = false
 }) => {
   const [currentPath, setCurrentPath] = useState(initialDirectory);
-  const [items, setItems] = useState<{name: string, path: string, isDir: boolean}[]>([]);
+  const [items, setItems] = useState<{ name: string, path: string, isDir: boolean }[]>([]);
 
   useEffect(() => {
     loadItems(currentPath);
@@ -44,13 +44,17 @@ export const FilePicker: React.FC<FilePickerProps> = ({
   const loadItems = async (path: string) => {
     try {
       const result = await RNFS.readDir(path);
+      if (!result || !Array.isArray(result)) {
+        setItems([]);
+        return;
+      }
       const mappedItems = result
         .map(item => ({
           name: item.name,
           path: item.path,
           isDir: item.isDirectory(),
         }))
-	    .filter(item => {
+        .filter(item => {
           // 1. Nascondi file/cartelle che iniziano con "."
           if (item.name.startsWith('.')) return false;
 
@@ -74,8 +78,8 @@ export const FilePicker: React.FC<FilePickerProps> = ({
   };
 
   const renderGridItem = ({ item }: { item: any }) => (
-    <Pressable 
-      style={styles.gridItem} 
+    <Pressable
+      style={styles.gridItem}
       onPress={() => item.isDir ? setCurrentPath(item.path) : onSelect(item.path)}
     >
       <View style={styles.thumbnailContainer}>
@@ -84,8 +88,8 @@ export const FilePicker: React.FC<FilePickerProps> = ({
             <Text style={styles.folderIcon}>📁</Text>
           </View>
         ) : (
-          <Image 
-            source={{ uri: `file://${item.path}` }} 
+          <Image
+            source={{ uri: `file://${item.path}` }}
             style={styles.thumbnail}
             resizeMode="cover"
           />
@@ -102,17 +106,17 @@ export const FilePicker: React.FC<FilePickerProps> = ({
   return (
     <View style={styles.pickerContainer}>
       <View style={styles.header}>
-        <Pressable 
+        <Pressable
           onPress={() => {
-             const parent = currentPath.substring(0, currentPath.lastIndexOf('/'));
-             setCurrentPath(parent || '/sdcard');
-          }} 
+            const parent = currentPath.substring(0, currentPath.lastIndexOf('/'));
+            setCurrentPath(parent || '/sdcard');
+          }}
           disabled={currentPath === '/sdcard'}
           style={styles.backBtn}
         >
           {/* Icona e testo più grandi per il tasto indietro */}
-          <Text style={[styles.navBtn, currentPath === '/sdcard' && {color: '#ccc'}]}>
-            ⬅ <Text style={{fontSize: 14}}>Indietro</Text>
+          <Text style={[styles.navBtn, currentPath === '/sdcard' && { color: '#ccc' }]}>
+            ⬅ <Text style={{ fontSize: 14 }}>Indietro</Text>
           </Text>
         </Pressable>
 
@@ -127,10 +131,10 @@ export const FilePicker: React.FC<FilePickerProps> = ({
           <Text style={styles.navBtn}>✕</Text>
         </Pressable>
       </View>
-	  
+
       <FlatList
         data={items}
-        key={`grid-${numColumns}`} 
+        key={`grid-${numColumns}`}
         keyExtractor={(item) => item.path}
         renderItem={renderGridItem}
         numColumns={numColumns}
@@ -142,28 +146,28 @@ export const FilePicker: React.FC<FilePickerProps> = ({
 
 const styles = StyleSheet.create({
   pickerContainer: { flex: 1, backgroundColor: '#fff' },
-  header: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-	paddingVertical: 12,
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
     paddingTop: 10,
     paddingBottom: 10,
-    paddingHorizontal: 15, 
-    alignItems: 'center', 
+    paddingHorizontal: 15,
+    alignItems: 'center',
     borderBottomWidth: 3, // Più visibile su E-Ink
-    borderColor: '#000' 
+    borderColor: '#000'
   },
   titleWrapper: {
     flex: 1,
     alignItems: 'center',
     paddingHorizontal: 10,
-  },  
+  },
   navBtn: { fontSize: 22, fontWeight: 'bold' },
   backBtn: { padding: 5 },
   closeBtn: { padding: 5 },
-  pathTitle: { 
+  pathTitle: {
     fontSize: 20, // Portato a 20px per massima leggibilità
-    color: '#000', 
+    color: '#000',
     fontWeight: 'bold', // Grassetto deciso
     textTransform: 'uppercase', // Aiuta a distinguere i nomi delle cartelle
   },
@@ -198,9 +202,9 @@ const styles = StyleSheet.create({
     minHeight: 40, // Altezza minima per contenere 2 righe di testo
     justifyContent: 'center'
   },
-  itemText: { 
+  itemText: {
     fontSize: 14, // Aumentato per leggibilità
-    color: '#000', 
+    color: '#000',
     textAlign: 'center',
     fontWeight: '600'
   },
