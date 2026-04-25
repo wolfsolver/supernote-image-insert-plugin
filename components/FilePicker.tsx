@@ -10,10 +10,10 @@ import {
 } from 'react-native';
 import RNFS from 'react-native-fs';
 
-// Configuriamo 3 colonne
+// Configure 3 columns
 const numColumns = 3;
 const screenWidth = Dimensions.get('window').width;
-// Aumentiamo il margine per separare meglio i tocchi della stilo
+// Increased gap to better separate stylus touches
 const gap = 8;
 const itemSize = (screenWidth - (gap * (numColumns + 1))) / numColumns;
 
@@ -24,8 +24,7 @@ interface FilePickerProps {
   showAllFolders?: boolean;
 }
 
-
-// Elenco delle cartelle consentite quando showAllFolders è false
+// List of allowed folders when showAllFolders is false
 const ALLOWED_ROOT_FOLDERS = ["Document", "EXPORT", "MyStyle", "Note", "SCREENSHOT", "INBOX"];
 
 export const FilePicker: React.FC<FilePickerProps> = ({
@@ -55,25 +54,25 @@ export const FilePicker: React.FC<FilePickerProps> = ({
           isDir: item.isDirectory(),
         }))
         .filter(item => {
-          // 1. Nascondi file/cartelle che iniziano con "."
+          // 1. Hide files/folders starting with "."
           if (item.name.startsWith('.')) return false;
 
           if (item.isDir) {
-            // 2. Se siamo nella directory radice e showAllFolders è false, filtra
+            // 2. If in root directory and showAllFolders is false, filter folders
             if (!showAllFolders && path === initialDirectory) {
               return ALLOWED_ROOT_FOLDERS.includes(item.name);
             }
             return true;
           }
 
-          // 3. Filtra solo immagini supportate
+          // 3. Filter only supported images
           return /\.(jpg|jpeg|png|bmp)$/i.test(item.name);
         })
         .sort((a, b) => (b.isDir === a.isDir ? a.name.localeCompare(b.name) : b.isDir ? 1 : -1));
 
       setItems(mappedItems);
     } catch (err) {
-      console.error("Errore lettura directory:", err);
+      console.error("Error reading directory:", err);
     }
   };
 
@@ -114,16 +113,16 @@ export const FilePicker: React.FC<FilePickerProps> = ({
           disabled={currentPath === '/sdcard'}
           style={styles.backBtn}
         >
-          {/* Icona e testo più grandi per il tasto indietro */}
+          {/* Larger icon and text for the back button */}
           <Text style={[styles.navBtn, currentPath === '/sdcard' && { color: '#ccc' }]}>
-            ⬅ <Text style={{ fontSize: 14 }}>Indietro</Text>
+            ⬅ <Text style={{ fontSize: 14 }}>Back</Text>
           </Text>
         </Pressable>
 
-        {/* Nome cartella ingrandito e centrato */}
+        {/* Folder name enlarged and centered */}
         <View style={styles.titleWrapper}>
           <Text style={styles.pathTitle} numberOfLines={1}>
-            {currentPath.split('/').pop() || 'Memoria'}
+            {currentPath.split('/').pop() || 'Storage'}
           </Text>
         </View>
 
@@ -154,7 +153,7 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
     paddingHorizontal: 15,
     alignItems: 'center',
-    borderBottomWidth: 3, // Più visibile su E-Ink
+    borderBottomWidth: 3, // More visible on E-Ink
     borderColor: '#000'
   },
   titleWrapper: {
@@ -166,10 +165,10 @@ const styles = StyleSheet.create({
   backBtn: { padding: 5 },
   closeBtn: { padding: 5 },
   pathTitle: {
-    fontSize: 20, // Portato a 20px per massima leggibilità
+    fontSize: 20, // Set to 20px for maximum readability
     color: '#000',
-    fontWeight: 'bold', // Grassetto deciso
-    textTransform: 'uppercase', // Aiuta a distinguere i nomi delle cartelle
+    fontWeight: 'bold', // Bold font
+    textTransform: 'uppercase', // Helps distinguish folder names
   },
   listContent: { padding: gap / 2 },
   gridItem: {
@@ -177,13 +176,13 @@ const styles = StyleSheet.create({
     margin: gap / 2,
     backgroundColor: '#fff',
     borderWidth: 1.5,
-    borderColor: '#000', // Bordo nero netto per contrasto
+    borderColor: '#000', // Sharp black border for contrast
     borderRadius: 4,
     overflow: 'hidden'
   },
   thumbnailContainer: {
     width: '100%',
-    height: itemSize - 20, // Lasciamo spazio per il testo sotto
+    height: itemSize - 20, // Leave space for text below
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#eee',
@@ -199,11 +198,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderTopWidth: 1,
     borderColor: '#000',
-    minHeight: 40, // Altezza minima per contenere 2 righe di testo
+    minHeight: 40, // Min height to accommodate 2 lines of text
     justifyContent: 'center'
   },
   itemText: {
-    fontSize: 14, // Aumentato per leggibilità
+    fontSize: 14, // Increased for readability
     color: '#000',
     textAlign: 'center',
     fontWeight: '600'

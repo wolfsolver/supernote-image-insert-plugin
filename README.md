@@ -27,6 +27,8 @@ The plugin includes a custom cropping interface specifically designed for the Su
 * **SDK**: `sn-plugin-lib`
 * **Dependencies**: `react-native-fs`, `@react-native-community/image-editor`
 
+After clone run `npm install`.
+
 ## Screenshots
 
 | Folder Navigation | File Picker | Cropping Tool |

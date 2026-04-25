@@ -19,7 +19,7 @@ const DEFAULT_WIDTH = 1404;
 const DEFAULT_HEIGHT = 1872;
 const HEADER_HEIGHT = 60;
 const FOOTER_HEIGHT = 80;
-const CONTROLS_HEIGHT = 220; // Spazio riservato per i tasti manuali in basso
+const CONTROLS_HEIGHT = 220; // Reserved space for manual buttons at the bottom
 
 function App(): React.JSX.Element {
   const [dimensions, setDimensions] = useState({ width: DEFAULT_WIDTH, height: DEFAULT_HEIGHT });
@@ -27,24 +27,24 @@ function App(): React.JSX.Element {
   const [originalSize, setOriginalSize] = useState({ width: 0, height: 0 });
   const [displaySize, setDisplaySize] = useState({ width: 0, height: 0, x: 0, y: 0 });
 
-  // Area visualizzazione immagine, ridotta per non sovrapporsi a Header, Footer e Controlli manuali
-  const VIEW_WIDTH = dimensions.width - 40; // 20px di margine per lato
+  // Image display area, reduced to not overlap with Header, Footer, and manual Controls
+  const VIEW_WIDTH = dimensions.width - 40; // 20px margin per side
   const VIEW_HEIGHT = dimensions.height - HEADER_HEIGHT - FOOTER_HEIGHT - CONTROLS_HEIGHT;
 
-  // Crop area in coordinate relative alla View (0 a VIEW_WIDTH/HEIGHT)
+  // Crop area in coordinates relative to the View (0 to VIEW_WIDTH/HEIGHT)
   const [cropBox, setCropBox] = useState({ x: 50, y: 50, w: 200, h: 200 });
 
   useEffect(() => {
     const initPlugin = async () => {
       console.log("[IMAGE/Apps] App Mounted - initializing");
 
-      // Determiniamo le dimensioni in base al device
+      // Determine dimensions based on device
       try {
         const deviceType = await PluginManager.getDeviceType();
         console.log("[IMAGE/Apps] Device Type:", deviceType);
         if (deviceType === 5) { // A5X / A5X2
           setDimensions({ width: 1920, height: 2560 });
-        } else { // A6X / A6X2 e altri
+        } else { // A6X / A6X2 and others
           setDimensions({ width: 1404, height: 1872 });
         }
       } catch (e) {
@@ -73,7 +73,7 @@ function App(): React.JSX.Element {
       Image.getSize(selectedImage, (w, h) => {
         setOriginalSize({ width: w, height: h });
 
-        // Calcoliamo come l'immagine viene fittata nell'area (resizeMode: contain)
+        // Calculate how the image fits in the area (resizeMode: contain)
         const screenRatio = VIEW_WIDTH / VIEW_HEIGHT;
         const imageRatio = w / h;
 
@@ -90,7 +90,7 @@ function App(): React.JSX.Element {
           dy = 0;
         }
         setDisplaySize({ width: dw, height: dh, x: dx, y: dy });
-        // Centriamo un box iniziale
+        // Center an initial box
         setCropBox({
           x: dx + dw / 4,
           y: dy + dh / 4,
@@ -135,8 +135,7 @@ function App(): React.JSX.Element {
     console.log("[IMAGE/Apps] Crop and Insert for:", selectedImage);
     if (selectedImage && originalSize.width > 0) {
       try {
-        // Calcoliamo le coordinate reali dell'immagine
-        // 1. Troviamo la posizione del box rispetto all'immagine renderizzata
+        // Calculate real image coordinates
         const relX = (cropBox.x - displaySize.x) / displaySize.width;
         const relY = (cropBox.y - displaySize.y) / displaySize.height;
         const relW = cropBox.w / displaySize.width;
@@ -175,16 +174,16 @@ function App(): React.JSX.Element {
     }
   };
 
-  // PanResponder per muovere il box
+  // PanResponder to move the box
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onPanResponderMove: (_, gestureState) => {
         setCropBox(prev => {
-          let newX = prev.x + gestureState.dx / 20; // Smorzamento per e-ink
+          let newX = prev.x + gestureState.dx / 20; // Damping for e-ink
           let newY = prev.y + gestureState.dy / 20;
 
-          // Limiti
+          // Limits
           newX = Math.max(displaySize.x, Math.min(newX, displaySize.x + displaySize.width - prev.w));
           newY = Math.max(displaySize.y, Math.min(newY, displaySize.y + displaySize.height - prev.h));
 
@@ -195,7 +194,7 @@ function App(): React.JSX.Element {
     })
   ).current;
 
-  // Semplice ridimensionamento tramite tasti o trascinamento angolo (qui facciamo tasti per stabilità)
+  // Manual resizing/moving controls (more reliable for E-ink)
   const changeCropSize = (dw: number, dh: number) => {
     setCropBox(prev => {
       const newW = Math.max(50, Math.min(prev.w + dw, displaySize.width - (prev.x - displaySize.x)));
@@ -209,7 +208,7 @@ function App(): React.JSX.Element {
       let newX = prev.x + dx;
       let newY = prev.y + dy;
 
-      // Limiti
+      // Limits
       newX = Math.max(displaySize.x, Math.min(newX, displaySize.x + displaySize.width - prev.w));
       newY = Math.max(displaySize.y, Math.min(newY, displaySize.y + displaySize.height - prev.h));
 
@@ -230,16 +229,15 @@ function App(): React.JSX.Element {
         <View style={styles.cropperContainer}>
           <View style={styles.cropperHeader}>
             <Pressable onPress={handleBackToPicker} style={styles.headerBtn}>
-              <Text style={styles.headerBtnText}>← Indietro</Text>
+              <Text style={styles.headerBtnText}>← Back</Text>
             </Pressable>
-            <Text style={styles.headerTitle}>RITAGLIA IMMAGINE</Text>
+            <Text style={styles.headerTitle}>CROP IMAGE</Text>
             <Pressable onPress={handleClose} style={styles.closeBtn}>
               <Text style={styles.navBtn}>✕</Text>
             </Pressable>
           </View>
 
           <View style={styles.cropView}>
-            {/* Wrapper con dimensioni dinamiche e margine di sicurezza */}
             <View style={{
               width: VIEW_WIDTH,
               height: VIEW_HEIGHT,
@@ -252,12 +250,10 @@ function App(): React.JSX.Element {
                 style={styles.fullImage}
                 resizeMode="contain"
               />
-              {/* Overlay di oscuramento */}
               <View style={[styles.overlay, {
                 left: displaySize.x, top: displaySize.y,
                 width: displaySize.width, height: displaySize.height
               }]}>
-                {/* Box di ritaglio */}
                 <View
                   {...panResponder.panHandlers}
                   style={[styles.cropSelection, {
@@ -272,14 +268,13 @@ function App(): React.JSX.Element {
               </View>
             </View>
 
-            {/* Controlli zoom/ridimensionamento/spostamento manuali (più affidabili su E-ink) */}
             <View style={styles.manualControls}>
               <View style={styles.controlRow}>
                 <View style={styles.controlGroup}>
                   <Pressable onPress={() => changeCropSize(-30, 0)} style={styles.roundBtn}>
                     <Text style={styles.roundBtnText}>-</Text>
                   </Pressable>
-                  <Text style={styles.controlLabel}>LARGHEZZA</Text>
+                  <Text style={styles.controlLabel}>WIDTH</Text>
                   <Pressable onPress={() => changeCropSize(30, 0)} style={styles.roundBtn}>
                     <Text style={styles.roundBtnText}>+</Text>
                   </Pressable>
@@ -289,7 +284,7 @@ function App(): React.JSX.Element {
                   <Pressable onPress={() => changeCropSize(0, -30)} style={styles.roundBtn}>
                     <Text style={styles.roundBtnText}>-</Text>
                   </Pressable>
-                  <Text style={styles.controlLabel}>ALTEZZA</Text>
+                  <Text style={styles.controlLabel}>HEIGHT</Text>
                   <Pressable onPress={() => changeCropSize(0, 30)} style={styles.roundBtn}>
                     <Text style={styles.roundBtnText}>+</Text>
                   </Pressable>
@@ -318,13 +313,13 @@ function App(): React.JSX.Element {
               onPress={handleInsertOriginal}
               style={[styles.footerBtn, styles.originalBtn]}
             >
-              <Text style={styles.footerBtnText}>INSERISCI INTERA</Text>
+              <Text style={styles.footerBtnText}>INSERT ORIGINAL</Text>
             </Pressable>
             <Pressable
               onPress={handleCropAndInsert}
               style={[styles.footerBtn, styles.cropBtn]}
             >
-              <Text style={[styles.footerBtnText, { color: '#fff' }]}>RITAGLIA E INSERISCI</Text>
+              <Text style={[styles.footerBtnText, { color: '#fff' }]}>CROP & INSERT</Text>
             </Pressable>
           </View>
         </View>
@@ -341,6 +336,7 @@ function App(): React.JSX.Element {
   );
 }
 
+// ... styles remain unchanged (except for localized comments)
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -350,7 +346,7 @@ const styles = StyleSheet.create({
   footer: { fontSize: 14, fontStyle: 'italic', color: '#666' },
   closeBtn: { padding: 5 },
   navBtn: { fontSize: 22, fontWeight: 'bold' },
-  // Stili Cropper
+  // Cropper Styles
   cropperContainer: { flex: 1, backgroundColor: '#fff' },
   cropperHeader: {
     height: 60,
@@ -382,7 +378,7 @@ const styles = StyleSheet.create({
   },
   overlay: {
     position: 'absolute',
-    backgroundColor: 'rgba(0,0,0,0.1)', // Molto leggero per E-ink
+    backgroundColor: 'rgba(0,0,0,0.1)', // Very light for E-ink
   },
   cropSelection: {
     position: 'absolute',
@@ -444,7 +440,7 @@ const styles = StyleSheet.create({
   footerBtn: {
     flex: 1,
     marginHorizontal: 5,
-    height: 55, // Abbastanza grande per la stilo
+    height: 55, // Large enough for stylus
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: 6,

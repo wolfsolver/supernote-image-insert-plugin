@@ -4,8 +4,8 @@
     "iconPath": "./assets/insert_image.png",
     "desc": "A simple plugin for insert image into note\n\nPowered by Wolfsolver, website: https://github.com/wolfsolver/supernote-image-insert-plugin \n",
     "name": "Insert Image",
-    "versionCode": "3",
-    "versionName": "0.1.1",
+    "versionCode": "4",
+    "versionName": "0.1.3",
     "jsMainPath": "index",
     "author": "Wolfsolver"
 }
