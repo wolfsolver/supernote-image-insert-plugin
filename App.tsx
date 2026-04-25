@@ -5,10 +5,8 @@ import {
   Pressable,
   Text,
   StatusBar,
-  Dimensions,
   Image,
   PanResponder,
-  LayoutChangeEvent
 } from 'react-native';
 import { FilePicker } from './components/FilePicker';
 import { PluginManager, PluginNoteAPI } from 'sn-plugin-lib';
@@ -19,7 +17,7 @@ const DEFAULT_WIDTH = 1404;
 const DEFAULT_HEIGHT = 1872;
 const HEADER_HEIGHT = 60;
 const FOOTER_HEIGHT = 80;
-const CONTROLS_HEIGHT = 220; // Reserved space for manual buttons at the bottom
+const CONTROLS_HEIGHT = 240; // Leggermente aumentato per i tasti manuali
 
 function App(): React.JSX.Element {
   const [dimensions, setDimensions] = useState({ width: DEFAULT_WIDTH, height: DEFAULT_HEIGHT });
@@ -27,44 +25,29 @@ function App(): React.JSX.Element {
   const [originalSize, setOriginalSize] = useState({ width: 0, height: 0 });
   const [displaySize, setDisplaySize] = useState({ width: 0, height: 0, x: 0, y: 0 });
 
-  // Image display area, reduced to not overlap with Header, Footer, and manual Controls
-  const VIEW_WIDTH = dimensions.width - 40; // 20px margin per side
-  const VIEW_HEIGHT = dimensions.height - HEADER_HEIGHT - FOOTER_HEIGHT - CONTROLS_HEIGHT;
+  // --- LOGICA RIDUZIONE AREA (70% dello spazio disponibile) ---
+  const AVAILABLE_WIDTH = dimensions.width - 40;
+  const AVAILABLE_HEIGHT = dimensions.height - HEADER_HEIGHT - FOOTER_HEIGHT - CONTROLS_HEIGHT;
 
-  // Crop area in coordinates relative to the View (0 to VIEW_WIDTH/HEIGHT)
+  const VIEW_WIDTH = AVAILABLE_WIDTH * 0.7;  // 70% della larghezza
+  const VIEW_HEIGHT = AVAILABLE_HEIGHT * 0.7; // 70% dell'altezza
+  // -------------------------------------------------------------
+
   const [cropBox, setCropBox] = useState({ x: 50, y: 50, w: 200, h: 200 });
 
   useEffect(() => {
     const initPlugin = async () => {
-      console.log("[IMAGE/Apps] App Mounted - initializing");
-
-      // Determine dimensions based on device
       try {
         const deviceType = await PluginManager.getDeviceType();
-        console.log("[IMAGE/Apps] Device Type:", deviceType);
         if (deviceType === 5) { // A5X / A5X2
           setDimensions({ width: 1920, height: 2560 });
-        } else { // A6X / A6X2 and others
+        } else { 
           setDimensions({ width: 1404, height: 1872 });
         }
       } catch (e) {
-        console.log("[IMAGE/Apps] Error getting device type:", e);
-      }
-
-      setSelectedImage(null);
-
-      if (PluginManager.registerButtonListener) {
-        (PluginManager.registerButtonListener as any)({
-          onButtonPress(event: any) {
-            if (event.id === 100 || event.id === '100') {
-              console.log("[IMAGE/Apps] Plugin refocused via listener - resetting image");
-              setSelectedImage(null);
-            }
-          }
-        });
+        console.log("[IMAGE/Apps] Init Error:", e);
       }
     };
-
     initPlugin();
   }, []);
 
@@ -73,7 +56,6 @@ function App(): React.JSX.Element {
       Image.getSize(selectedImage, (w, h) => {
         setOriginalSize({ width: w, height: h });
 
-        // Calculate how the image fits in the area (resizeMode: contain)
         const screenRatio = VIEW_WIDTH / VIEW_HEIGHT;
         const imageRatio = w / h;
 
@@ -90,7 +72,7 @@ function App(): React.JSX.Element {
           dy = 0;
         }
         setDisplaySize({ width: dw, height: dh, x: dx, y: dy });
-        // Center an initial box
+        // Posiziona il crop box iniziale relativo al nuovo spazio 70%
         setCropBox({
           x: dx + dw / 4,
           y: dy + dh / 4,
@@ -99,43 +81,22 @@ function App(): React.JSX.Element {
         });
       });
     }
-  }, [selectedImage]);
+  }, [selectedImage, VIEW_WIDTH, VIEW_HEIGHT]);
 
   const handleClose = () => {
-    console.log("[IMAGE/Apps] Close Plugin and clear data");
     setSelectedImage(null);
-    setOriginalSize({ width: 0, height: 0 });
-    setDisplaySize({ width: 0, height: 0, x: 0, y: 0 });
     PluginManager.closePluginView();
   };
 
   const handleImageSelected = (path: string) => {
     const fullPath = path.startsWith('/') ? `file://${path}` : path;
-    console.log("[IMAGE/Apps] Image Select path:" + fullPath);
     setSelectedImage(fullPath);
   };
 
-  const handleBackToPicker = () => {
-    console.log("[IMAGE/Apps] Back to FilePicker");
-    setSelectedImage(null);
-    setOriginalSize({ width: 0, height: 0 });
-    setDisplaySize({ width: 0, height: 0, x: 0, y: 0 });
-  };
-
-  const handleInsertOriginal = () => {
-    if (selectedImage && PluginNoteAPI) {
-      const cleanPath = selectedImage.replace('file://', '');
-      console.log("[IMAGE/Apps] Image Insert path:" + cleanPath);
-      PluginNoteAPI.insertImage(cleanPath);
-      handleClose();
-    }
-  };
-
   const handleCropAndInsert = async () => {
-    console.log("[IMAGE/Apps] Crop and Insert for:", selectedImage);
     if (selectedImage && originalSize.width > 0) {
       try {
-        // Calculate real image coordinates
+        // Calcolo basato sulle dimensioni ridotte (displaySize è ora relativo al 70%)
         const relX = (cropBox.x - displaySize.x) / displaySize.width;
         const relY = (cropBox.y - displaySize.y) / displaySize.height;
         const relW = cropBox.w / displaySize.width;
@@ -157,15 +118,9 @@ function App(): React.JSX.Element {
           resizeMode: 'contain' as const,
         };
 
-        console.log("[IMAGE/Apps] Crop Data:", JSON.stringify(cropData));
-
         const cropResult = await ImageEditor.cropImage(selectedImage, cropData);
-        console.log("[IMAGE/Apps] Image Crop path:" + cropResult.uri);
-
         if (PluginNoteAPI) {
-          const cleanPath = cropResult.uri.replace('file://', '');
-          console.log("[IMAGE/Apps] Image Insert cropped path:" + cleanPath);
-          PluginNoteAPI.insertImage(cleanPath);
+          PluginNoteAPI.insertImage(cropResult.uri.replace('file://', ''));
           handleClose();
         }
       } catch (err) {
@@ -174,44 +129,33 @@ function App(): React.JSX.Element {
     }
   };
 
-  // PanResponder to move the box
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onPanResponderMove: (_, gestureState) => {
         setCropBox(prev => {
-          let newX = prev.x + gestureState.dx / 20; // Damping for e-ink
-          let newY = prev.y + gestureState.dy / 20;
-
-          // Limits
+          let newX = prev.x + gestureState.dx / 15; 
+          let newY = prev.y + gestureState.dy / 15;
           newX = Math.max(displaySize.x, Math.min(newX, displaySize.x + displaySize.width - prev.w));
           newY = Math.max(displaySize.y, Math.min(newY, displaySize.y + displaySize.height - prev.h));
-
           return { ...prev, x: newX, y: newY };
         });
       },
-      onPanResponderRelease: () => { },
     })
   ).current;
 
-  // Manual resizing/moving controls (more reliable for E-ink)
   const changeCropSize = (dw: number, dh: number) => {
-    setCropBox(prev => {
-      const newW = Math.max(50, Math.min(prev.w + dw, displaySize.width - (prev.x - displaySize.x)));
-      const newH = Math.max(50, Math.min(prev.h + dh, displaySize.height - (prev.y - displaySize.y)));
-      return { ...prev, w: newW, h: newH };
-    });
+    setCropBox(prev => ({
+      ...prev,
+      w: Math.max(50, Math.min(prev.w + dw, displaySize.width - (prev.x - displaySize.x))),
+      h: Math.max(50, Math.min(prev.h + dh, displaySize.height - (prev.y - displaySize.y)))
+    }));
   };
 
   const moveCropBox = (dx: number, dy: number) => {
     setCropBox(prev => {
-      let newX = prev.x + dx;
-      let newY = prev.y + dy;
-
-      // Limits
-      newX = Math.max(displaySize.x, Math.min(newX, displaySize.x + displaySize.width - prev.w));
-      newY = Math.max(displaySize.y, Math.min(newY, displaySize.y + displaySize.height - prev.h));
-
+      let newX = Math.max(displaySize.x, Math.min(prev.x + dx, displaySize.x + displaySize.width - prev.w));
+      let newY = Math.max(displaySize.y, Math.min(prev.y + dy, displaySize.y + displaySize.height - prev.h));
       return { ...prev, x: newX, y: newY };
     });
   };
@@ -221,14 +165,11 @@ function App(): React.JSX.Element {
       <StatusBar barStyle="dark-content" />
 
       {!selectedImage ? (
-        <FilePicker
-          onSelect={handleImageSelected}
-          onClose={handleClose}
-        />
+        <FilePicker onSelect={handleImageSelected} onClose={handleClose} />
       ) : (
         <View style={styles.cropperContainer}>
           <View style={styles.cropperHeader}>
-            <Pressable onPress={handleBackToPicker} style={styles.headerBtn}>
+            <Pressable onPress={() => setSelectedImage(null)} style={styles.headerBtn}>
               <Text style={styles.headerBtnText}>← Back</Text>
             </Pressable>
             <Text style={styles.headerTitle}>CROP IMAGE</Text>
@@ -238,115 +179,81 @@ function App(): React.JSX.Element {
           </View>
 
           <View style={styles.cropView}>
+            {/* AREA DI VISUALIZZAZIONE LIMITATA AL 70% */}
             <View style={{
               width: VIEW_WIDTH,
               height: VIEW_HEIGHT,
-              marginTop: 10,
+              backgroundColor: '#fff', // Sfondo bianco per staccare dal grigio dell'area esterna
+              borderWidth: 2,
+              borderColor: '#000',
               justifyContent: 'center',
-              alignItems: 'center'
+              alignItems: 'center',
+              overflow: 'hidden',
             }}>
-              <Image
-                source={{ uri: selectedImage }}
-                style={styles.fullImage}
-                resizeMode="contain"
-              />
-              <View style={[styles.overlay, {
-                left: displaySize.x, top: displaySize.y,
-                width: displaySize.width, height: displaySize.height
-              }]}>
-                <View
-                  {...panResponder.panHandlers}
-                  style={[styles.cropSelection, {
-                    left: cropBox.x - displaySize.x,
-                    top: cropBox.y - displaySize.y,
-                    width: cropBox.w,
-                    height: cropBox.h
-                  }]}
-                >
-                  <View style={styles.cropHandle} />
+              <View style={{ width: displaySize.width, height: displaySize.height }}>
+                <Image source={{ uri: selectedImage }} style={styles.fullImage} resizeMode="contain" />
+                <View style={[styles.overlay, { width: displaySize.width, height: displaySize.height }]}>
+                  <View
+                    {...panResponder.panHandlers}
+                    style={[styles.cropSelection, {
+                      left: cropBox.x - displaySize.x,
+                      top: cropBox.y - displaySize.y,
+                      width: cropBox.w,
+                      height: cropBox.h
+                    }]}
+                  >
+                    <View style={styles.cropHandle} />
+                  </View>
                 </View>
               </View>
             </View>
 
+            {/* CONTROLLI MANUALI SEMPRE VISIBILI IN BASSO */}
             <View style={styles.manualControls}>
               <View style={styles.controlRow}>
                 <View style={styles.controlGroup}>
-                  <Pressable onPress={() => changeCropSize(-30, 0)} style={styles.roundBtn}>
-                    <Text style={styles.roundBtnText}>-</Text>
-                  </Pressable>
+                  <Pressable onPress={() => changeCropSize(-30, 0)} style={styles.roundBtn}><Text style={styles.roundBtnText}>-</Text></Pressable>
                   <Text style={styles.controlLabel}>WIDTH</Text>
-                  <Pressable onPress={() => changeCropSize(30, 0)} style={styles.roundBtn}>
-                    <Text style={styles.roundBtnText}>+</Text>
-                  </Pressable>
+                  <Pressable onPress={() => changeCropSize(30, 0)} style={styles.roundBtn}><Text style={styles.roundBtnText}>+</Text></Pressable>
                 </View>
-
                 <View style={styles.controlGroup}>
-                  <Pressable onPress={() => changeCropSize(0, -30)} style={styles.roundBtn}>
-                    <Text style={styles.roundBtnText}>-</Text>
-                  </Pressable>
+                  <Pressable onPress={() => changeCropSize(0, -30)} style={styles.roundBtn}><Text style={styles.roundBtnText}>-</Text></Pressable>
                   <Text style={styles.controlLabel}>HEIGHT</Text>
-                  <Pressable onPress={() => changeCropSize(0, 30)} style={styles.roundBtn}>
-                    <Text style={styles.roundBtnText}>+</Text>
-                  </Pressable>
+                  <Pressable onPress={() => changeCropSize(0, 30)} style={styles.roundBtn}><Text style={styles.roundBtnText}>+</Text></Pressable>
                 </View>
               </View>
-
               <View style={styles.controlGroup}>
-                <Pressable onPress={() => moveCropBox(-30, 0)} style={styles.roundBtn}>
-                  <Text style={styles.roundBtnText}>←</Text>
-                </Pressable>
-                <Pressable onPress={() => moveCropBox(0, -30)} style={styles.roundBtn}>
-                  <Text style={styles.roundBtnText}>↑</Text>
-                </Pressable>
-                <Pressable onPress={() => moveCropBox(0, 30)} style={styles.roundBtn}>
-                  <Text style={styles.roundBtnText}>↓</Text>
-                </Pressable>
-                <Pressable onPress={() => moveCropBox(30, 0)} style={styles.roundBtn}>
-                  <Text style={styles.roundBtnText}>→</Text>
-                </Pressable>
+                <Pressable onPress={() => moveCropBox(-30, 0)} style={styles.roundBtn}><Text style={styles.roundBtnText}>←</Text></Pressable>
+                <Pressable onPress={() => moveCropBox(0, -30)} style={styles.roundBtn}><Text style={styles.roundBtnText}>↑</Text></Pressable>
+                <Pressable onPress={() => moveCropBox(0, 30)} style={styles.roundBtn}><Text style={styles.roundBtnText}>↓</Text></Pressable>
+                <Pressable onPress={() => moveCropBox(30, 0)} style={styles.roundBtn}><Text style={styles.roundBtnText}>→</Text></Pressable>
               </View>
             </View>
           </View>
 
           <View style={styles.cropperFooter}>
-            <Pressable
-              onPress={handleInsertOriginal}
-              style={[styles.footerBtn, styles.originalBtn]}
-            >
+            <Pressable onPress={() => {
+              if (PluginNoteAPI) {
+                PluginNoteAPI.insertImage(selectedImage!.replace('file://', ''));
+                handleClose();
+              }
+            }} style={[styles.footerBtn, styles.originalBtn]}>
               <Text style={styles.footerBtnText}>INSERT ORIGINAL</Text>
             </Pressable>
-            <Pressable
-              onPress={handleCropAndInsert}
-              style={[styles.footerBtn, styles.cropBtn]}
-            >
+            <Pressable onPress={handleCropAndInsert} style={[styles.footerBtn, styles.cropBtn]}>
               <Text style={[styles.footerBtnText, { color: '#fff' }]}>CROP & INSERT</Text>
             </Pressable>
           </View>
-        </View>
-      )}
-
-      {!selectedImage && (
-        <View style={styles.footerContainer}>
-          <Text style={styles.footer}>
-            {config.name} v{config.versionName} by {config.author}
-          </Text>
         </View>
       )}
     </View>
   );
 }
 
-// ... styles remain unchanged (except for localized comments)
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#ffffff',
-  },
-  footerContainer: { paddingBottom: 10, alignItems: 'center' },
-  footer: { fontSize: 14, fontStyle: 'italic', color: '#666' },
+  container: { flex: 1, backgroundColor: '#ffffff' },
   closeBtn: { padding: 5 },
   navBtn: { fontSize: 22, fontWeight: 'bold' },
-  // Cropper Styles
   cropperContainer: { flex: 1, backgroundColor: '#fff' },
   cropperHeader: {
     height: 60,
@@ -358,103 +265,38 @@ const styles = StyleSheet.create({
     borderColor: '#000'
   },
   headerTitle: { fontWeight: 'bold', fontSize: 18, color: '#000' },
-  headerBtn: {
-    padding: 10,
-    marginLeft: -5,
-    minHeight: 45,
-    justifyContent: 'center'
-  },
+  headerBtn: { padding: 10, minHeight: 45, justifyContent: 'center' },
   headerBtnText: { fontSize: 16, fontWeight: 'bold', color: '#000' },
-
-  cropView: {
-    flex: 1,
-    backgroundColor: '#eee',
-    justifyContent: 'center',
+  cropView: { 
+    flex: 1, 
+    backgroundColor: '#ddd', // Sfondo scuro per evidenziare l'area 70%
+    justifyContent: 'flex-start', // Sposta l'area verso l'alto per lasciare spazio ai tasti
     alignItems: 'center',
+    paddingTop: 20
   },
-  fullImage: {
-    width: '100%',
-    height: '100%',
-  },
-  overlay: {
-    position: 'absolute',
-    backgroundColor: 'rgba(0,0,0,0.1)', // Very light for E-ink
-  },
-  cropSelection: {
-    position: 'absolute',
-    borderWidth: 4,
-    borderColor: '#000',
-    backgroundColor: 'rgba(255,255,255,0.1)',
-  },
-  cropHandle: {
-    position: 'absolute',
-    bottom: -10,
-    right: -10,
-    width: 20,
-    height: 20,
-    backgroundColor: '#000',
-    borderRadius: 10,
-  },
+  fullImage: { width: '100%', height: '100%' },
+  overlay: { position: 'absolute', backgroundColor: 'rgba(0,0,0,0.05)' },
+  cropSelection: { position: 'absolute', borderWidth: 4, borderColor: '#000', backgroundColor: 'rgba(255,255,255,0.1)' },
+  cropHandle: { position: 'absolute', bottom: -10, right: -10, width: 20, height: 20, backgroundColor: '#000', borderRadius: 10 },
   manualControls: {
-    position: 'absolute',
-    bottom: 5,
-    backgroundColor: 'rgba(255,255,255,0.9)',
-    padding: 10,
-    borderRadius: 15,
+    marginTop: 1,
+    backgroundColor: '#fff',
+    padding: 5,
     borderWidth: 2,
     borderColor: '#000',
     alignItems: 'center',
-    width: '95%',
-  },
-  controlGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 3,
-    marginHorizontal: 5,
-  },
-  controlRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
     width: '100%',
   },
-  roundBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#000',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginHorizontal: 10,
-  },
+  controlGroup: { flexDirection: 'row', alignItems: 'center', marginVertical: 3, marginHorizontal: 5 },
+  controlRow: { flexDirection: 'row', justifyContent: 'center', width: '100%' },
+  roundBtn: { width: 45, height: 45, borderRadius: 22.5, backgroundColor: '#000', justifyContent: 'center', alignItems: 'center', marginHorizontal: 8 },
   roundBtnText: { color: '#fff', fontSize: 24, fontWeight: 'bold' },
-  controlLabel: { fontWeight: 'bold', fontSize: 12 },
-
-  cropperFooter: {
-    height: 80,
-    flexDirection: 'row',
-    padding: 10,
-    borderTopWidth: 3,
-    borderColor: '#000',
-    backgroundColor: '#fff'
-  },
-  footerBtn: {
-    flex: 1,
-    marginHorizontal: 5,
-    height: 55, // Large enough for stylus
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: 6,
-    borderWidth: 2,
-    borderColor: '#000'
-  },
+  controlLabel: { fontWeight: 'bold', fontSize: 12, width: 60, textAlign: 'center' },
+  cropperFooter: { height: 80, flexDirection: 'row', padding: 10, borderTopWidth: 3, borderColor: '#000', backgroundColor: '#fff' },
+  footerBtn: { flex: 1, marginHorizontal: 5, height: 55, justifyContent: 'center', alignItems: 'center', borderRadius: 6, borderWidth: 2, borderColor: '#000' },
   originalBtn: { backgroundColor: '#fff' },
   cropBtn: { backgroundColor: '#000' },
-  footerBtnText: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#000',
-    textAlign: 'center'
-  },
+  footerBtnText: { fontSize: 14, fontWeight: 'bold', color: '#000', textAlign: 'center' },
 });
 
 export default App;
