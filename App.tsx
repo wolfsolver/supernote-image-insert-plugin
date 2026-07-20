@@ -9,7 +9,7 @@ import {
   PanResponder,
 } from 'react-native';
 import { FilePicker } from './components/FilePicker';
-import { PluginManager, PluginNoteAPI } from 'sn-plugin-lib';
+import { PluginManager, PluginNoteAPI, PluginCommAPI, PluginFileAPI } from 'sn-plugin-lib';
 import ImageEditor from '@react-native-community/image-editor';
 import config from './PluginConfig.json';
 
@@ -38,12 +38,17 @@ function App(): React.JSX.Element {
   useEffect(() => {
     const initPlugin = async () => {
       try {
-        const deviceType = await PluginManager.getDeviceType();
-        if (deviceType === 5) { // A5X / A5X2
-          setDimensions({ width: 1920, height: 2560 });
-        } else { 
-          setDimensions({ width: 1404, height: 1872 });
+        let pageSize = { width: DEFAULT_WIDTH, height: DEFAULT_HEIGHT };
+        const pathRes = await PluginCommAPI.getCurrentFilePath() as any;
+        const pageRes = await PluginCommAPI.getCurrentPageNum() as any;
+
+        if (pathRes?.success && pathRes.result && pageRes?.success && pageRes.result !== undefined) {
+          const sizeRes = await PluginFileAPI.getPageSize(pathRes.result, pageRes.result) as any;
+          if (sizeRes?.success && sizeRes.result) {
+            pageSize = sizeRes.result;
+          }
         }
+        setDimensions(pageSize);
       } catch (e) {
         console.log("[IMAGE/Apps] Init Error:", e);
       }
@@ -172,7 +177,7 @@ function App(): React.JSX.Element {
             <Pressable onPress={() => setSelectedImage(null)} style={styles.headerBtn}>
               <Text style={styles.headerBtnText}>← Back</Text>
             </Pressable>
-            <Text style={styles.headerTitle}>CROP IMAGE</Text>
+            <Text style={styles.headerTitle}>CROP IMAGE ({dimensions.width}x{dimensions.height})</Text>
             <Pressable onPress={handleClose} style={styles.closeBtn}>
               <Text style={styles.navBtn}>✕</Text>
             </Pressable>
