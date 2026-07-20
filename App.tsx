@@ -11,7 +11,8 @@ import {
 import { FilePicker } from './components/FilePicker';
 import { PluginManager, PluginNoteAPI, PluginCommAPI, PluginFileAPI } from 'sn-plugin-lib';
 import ImageEditor from '@react-native-community/image-editor';
-import config from './PluginConfig.json';
+import { Saturate } from 'react-native-color-matrix-image-filters';
+import ViewShot from 'react-native-view-shot';
 
 const DEFAULT_WIDTH = 1404;
 const DEFAULT_HEIGHT = 1872;
@@ -25,12 +26,15 @@ function App(): React.JSX.Element {
   const [originalSize, setOriginalSize] = useState({ width: 0, height: 0 });
   const [displaySize, setDisplaySize] = useState({ width: 0, height: 0, x: 0, y: 0 });
 
-  // --- LOGICA RIDUZIONE AREA (70% dello spazio disponibile) ---
+  const [saturation, setSaturation] = useState<number>(1);
+  const viewShotRef = useRef<any>(null);
+
+  // --- LOGICA RIDUZIONE AREA (60% dello spazio disponibile per far posto ai filtri) ---
   const AVAILABLE_WIDTH = dimensions.width - 40;
   const AVAILABLE_HEIGHT = dimensions.height - HEADER_HEIGHT - FOOTER_HEIGHT - CONTROLS_HEIGHT;
 
-  const VIEW_WIDTH = AVAILABLE_WIDTH * 0.7;  // 70% della larghezza
-  const VIEW_HEIGHT = AVAILABLE_HEIGHT * 0.7; // 70% dell'altezza
+  const VIEW_WIDTH = AVAILABLE_WIDTH * 0.6;  // Ridotto per filtri
+  const VIEW_HEIGHT = AVAILABLE_HEIGHT * 0.6;
   // -------------------------------------------------------------
 
   const [cropBox, setCropBox] = useState({ x: 50, y: 50, w: 200, h: 200 });
@@ -50,7 +54,7 @@ function App(): React.JSX.Element {
         }
         setDimensions(pageSize);
       } catch (e) {
-        console.log("[IMAGE/Apps] Init Error:", e);
+        console.log('[IMAGE/Apps] Init Error:', e);
       }
     };
     initPlugin();
@@ -82,7 +86,7 @@ function App(): React.JSX.Element {
           x: dx + dw / 4,
           y: dy + dh / 4,
           w: dw / 2,
-          h: dh / 2
+          h: dh / 2,
         });
       });
     }
@@ -101,7 +105,23 @@ function App(): React.JSX.Element {
   const handleCropAndInsert = async () => {
     if (selectedImage && originalSize.width > 0) {
       try {
-        // Calcolo basato sulle dimensioni ridotte (displaySize è ora relativo al 70%)
+        let sourceUri = selectedImage;
+        let workWidth = originalSize.width;
+        let workHeight = originalSize.height;
+
+        // Se abbiamo filtri attivi o vogliamo usare la cattura visuale per sicurezza
+        if (viewShotRef.current) {
+          sourceUri = await viewShotRef.current.capture();
+          // Otteniamo la dimensione reale dell'immagine catturata
+          await new Promise<void>((resolve, reject) => {
+            Image.getSize(sourceUri, (w, h) => {
+              workWidth = w;
+              workHeight = h;
+              resolve();
+            }, reject);
+          });
+        }
+
         const relX = (cropBox.x - displaySize.x) / displaySize.width;
         const relY = (cropBox.y - displaySize.y) / displaySize.height;
         const relW = cropBox.w / displaySize.width;
@@ -109,27 +129,27 @@ function App(): React.JSX.Element {
 
         const cropData = {
           offset: {
-            x: Math.max(0, relX * originalSize.width),
-            y: Math.max(0, relY * originalSize.height),
+            x: Math.max(0, relX * workWidth),
+            y: Math.max(0, relY * workHeight),
           },
           size: {
-            width: Math.min(originalSize.width, relW * originalSize.width),
-            height: Math.min(originalSize.height, relH * originalSize.height),
+            width: Math.min(workWidth, relW * workWidth),
+            height: Math.min(workHeight, relH * workHeight),
           },
           displaySize: {
-            width: Math.min(originalSize.width, relW * originalSize.width),
-            height: Math.min(originalSize.height, relH * originalSize.height),
+            width: Math.min(workWidth, relW * workWidth),
+            height: Math.min(workHeight, relH * workHeight),
           },
           resizeMode: 'contain' as const,
         };
 
-        const cropResult = await ImageEditor.cropImage(selectedImage, cropData);
+        const cropResult = await ImageEditor.cropImage(sourceUri, cropData);
         if (PluginNoteAPI) {
           PluginNoteAPI.insertImage(cropResult.uri.replace('file://', ''));
           handleClose();
         }
       } catch (err) {
-        console.log("[IMAGE/Apps] Crop Error:", err);
+        console.log('[IMAGE/Apps] Crop Error:', err);
       }
     }
   };
@@ -139,7 +159,7 @@ function App(): React.JSX.Element {
       onStartShouldSetPanResponder: () => true,
       onPanResponderMove: (_, gestureState) => {
         setCropBox(prev => {
-          let newX = prev.x + gestureState.dx / 15; 
+          let newX = prev.x + gestureState.dx / 15;
           let newY = prev.y + gestureState.dy / 15;
           newX = Math.max(displaySize.x, Math.min(newX, displaySize.x + displaySize.width - prev.w));
           newY = Math.max(displaySize.y, Math.min(newY, displaySize.y + displaySize.height - prev.h));
@@ -153,7 +173,7 @@ function App(): React.JSX.Element {
     setCropBox(prev => ({
       ...prev,
       w: Math.max(50, Math.min(prev.w + dw, displaySize.width - (prev.x - displaySize.x))),
-      h: Math.max(50, Math.min(prev.h + dh, displaySize.height - (prev.y - displaySize.y)))
+      h: Math.max(50, Math.min(prev.h + dh, displaySize.height - (prev.y - displaySize.y))),
     }));
   };
 
@@ -183,37 +203,30 @@ function App(): React.JSX.Element {
             </Pressable>
           </View>
 
-          <View style={styles.cropView}>
-            {/* AREA DI VISUALIZZAZIONE LIMITATA AL 70% */}
-            <View style={{
-              width: VIEW_WIDTH,
-              height: VIEW_HEIGHT,
-              backgroundColor: '#fff', // Sfondo bianco per staccare dal grigio dell'area esterna
-              borderWidth: 2,
-              borderColor: '#000',
-              justifyContent: 'center',
-              alignItems: 'center',
-              overflow: 'hidden',
-            }}>
-              <View style={{ width: displaySize.width, height: displaySize.height }}>
-                <Image source={{ uri: selectedImage }} style={styles.fullImage} resizeMode="contain" />
-                <View style={[styles.overlay, { width: displaySize.width, height: displaySize.height }]}>
-                  <View
-                    {...panResponder.panHandlers}
-                    style={[styles.cropSelection, {
-                      left: cropBox.x - displaySize.x,
-                      top: cropBox.y - displaySize.y,
-                      width: cropBox.w,
-                      height: cropBox.h
-                    }]}
-                  >
-                    <View style={styles.cropHandle} />
-                  </View>
-                </View>
-              </View>
-            </View>
+          <View style={styles.cropperFooter}>
+            <Pressable onPress={async () => {
+              if (PluginNoteAPI) {
+                let finalUri = selectedImage!.replace('file://', '');
+                if (viewShotRef.current) {
+                  try {
+                    const captured = await viewShotRef.current.capture();
+                    finalUri = captured.replace('file://', '');
+                  } catch (e) {
+                    console.log('[IMAGE/Apps] Capture Error:', e);
+                  }
+                }
+                PluginNoteAPI.insertImage(finalUri);
+                handleClose();
+              }
+            }} style={[styles.footerBtn, styles.originalBtn]}>
+              <Text style={styles.footerBtnText}>INSERT FULL IMAGE</Text>
+            </Pressable>
+            <Pressable onPress={handleCropAndInsert} style={[styles.footerBtn, styles.cropBtn]}>
+              <Text style={[styles.footerBtnText, { color: '#fff' }]}>CROP & INSERT</Text>
+            </Pressable>
+          </View>
 
-            {/* CONTROLLI MANUALI SEMPRE VISIBILI IN BASSO */}
+          <View style={styles.cropView}>
             <View style={styles.manualControls}>
               <View style={styles.controlRow}>
                 <View style={styles.controlGroup}>
@@ -226,6 +239,21 @@ function App(): React.JSX.Element {
                   <Text style={styles.controlLabel}>HEIGHT</Text>
                   <Pressable onPress={() => changeCropSize(0, 30)} style={styles.roundBtn}><Text style={styles.roundBtnText}>+</Text></Pressable>
                 </View>
+                <View style={styles.controlGroup}>
+                  <Pressable
+                    style={[styles.satBtn]}
+                    onPress={() => setSaturation(s => Math.max(0, s - 0.1))}
+                  >
+                    <Text style={styles.satBtnText}>-</Text>
+                  </Pressable>
+                  <Text style={styles.controlLabel}>SATURATION {saturation.toFixed(1)}</Text>
+                  <Pressable
+                    style={[styles.satBtn]}
+                    onPress={() => setSaturation(s => Math.min(1, s + 0.1))}
+                  >
+                    <Text style={styles.satBtnText}>+</Text>
+                  </Pressable>
+                </View>
               </View>
               <View style={styles.controlGroup}>
                 <Pressable onPress={() => moveCropBox(-30, 0)} style={styles.roundBtn}><Text style={styles.roundBtnText}>←</Text></Pressable>
@@ -234,21 +262,40 @@ function App(): React.JSX.Element {
                 <Pressable onPress={() => moveCropBox(30, 0)} style={styles.roundBtn}><Text style={styles.roundBtnText}>→</Text></Pressable>
               </View>
             </View>
+
+            <View style={{
+              width: VIEW_WIDTH,
+              height: VIEW_HEIGHT,
+              backgroundColor: '#fff',
+              borderWidth: 2,
+              borderColor: '#000',
+              justifyContent: 'center',
+              alignItems: 'center',
+              overflow: 'hidden',
+            }}>
+              <View style={{ width: displaySize.width, height: displaySize.height }}>
+                <ViewShot ref={viewShotRef} options={{ format: 'png', quality: 1.0 }} style={StyleSheet.absoluteFill}>
+                  <Saturate amount={saturation}>
+                    <Image source={{ uri: selectedImage }} style={styles.fullImage} resizeMode="contain" />
+                  </Saturate>
+                </ViewShot>
+                <View style={[styles.overlay, { width: displaySize.width, height: displaySize.height }]} pointerEvents="box-none">
+                  <View
+                    {...panResponder.panHandlers}
+                    style={[styles.cropSelection, {
+                      left: cropBox.x - displaySize.x,
+                      top: cropBox.y - displaySize.y,
+                      width: cropBox.w,
+                      height: cropBox.h,
+                    }]}
+                  >
+                    <View style={styles.cropHandle} />
+                  </View>
+                </View>
+              </View>
+            </View>
           </View>
 
-          <View style={styles.cropperFooter}>
-            <Pressable onPress={() => {
-              if (PluginNoteAPI) {
-                PluginNoteAPI.insertImage(selectedImage!.replace('file://', ''));
-                handleClose();
-              }
-            }} style={[styles.footerBtn, styles.originalBtn]}>
-              <Text style={styles.footerBtnText}>INSERT ORIGINAL</Text>
-            </Pressable>
-            <Pressable onPress={handleCropAndInsert} style={[styles.footerBtn, styles.cropBtn]}>
-              <Text style={[styles.footerBtnText, { color: '#fff' }]}>CROP & INSERT</Text>
-            </Pressable>
-          </View>
         </View>
       )}
     </View>
@@ -267,17 +314,17 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 15,
     borderBottomWidth: 3,
-    borderColor: '#000'
+    borderColor: '#000',
   },
   headerTitle: { fontWeight: 'bold', fontSize: 18, color: '#000' },
   headerBtn: { padding: 10, minHeight: 45, justifyContent: 'center' },
   headerBtnText: { fontSize: 16, fontWeight: 'bold', color: '#000' },
-  cropView: { 
-    flex: 1, 
+  cropView: {
+    flex: 1,
     backgroundColor: '#ddd', // Sfondo scuro per evidenziare l'area 70%
     justifyContent: 'flex-start', // Sposta l'area verso l'alto per lasciare spazio ai tasti
     alignItems: 'center',
-    paddingTop: 20
+    paddingTop: 20,
   },
   fullImage: { width: '100%', height: '100%' },
   overlay: { position: 'absolute', backgroundColor: 'rgba(0,0,0,0.05)' },
@@ -302,6 +349,67 @@ const styles = StyleSheet.create({
   originalBtn: { backgroundColor: '#fff' },
   cropBtn: { backgroundColor: '#000' },
   footerBtnText: { fontSize: 14, fontWeight: 'bold', color: '#000', textAlign: 'center' },
+  filterBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 10,
+    backgroundColor: '#fff',
+    borderBottomWidth: 2,
+    borderColor: '#000',
+  },
+  bwToggleBtn: {
+    borderWidth: 2,
+    borderColor: '#000',
+    backgroundColor: '#fff',
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    borderRadius: 4,
+    marginRight: 20,
+  },
+  bwToggleBtnActive: {
+    backgroundColor: '#000',
+  },
+  bwToggleText: {
+    fontWeight: 'bold',
+    color: '#000',
+  },
+  bwToggleTextActive: {
+    color: '#fff',
+  },
+  sliderContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  satControlRow: {
+    flexDirection: 'row',
+    marginTop: 5,
+  },
+  satBtn: {
+    width: 40,
+    height: 40,
+    borderWidth: 2,
+    borderColor: '#000',
+    borderRadius: 20,
+    backgroundColor: '#000',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginHorizontal: 10,
+  },
+  satBtnDisabled: {
+    backgroundColor: '#ccc',
+    borderColor: '#999',
+  },
+  satBtnText: {
+    color: '#fff',
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  filterLabel: {
+    fontWeight: 'bold',
+    color: '#000',
+    fontSize: 12,
+  },
 });
 
 export default App;

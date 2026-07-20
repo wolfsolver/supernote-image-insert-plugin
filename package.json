@@ -13,7 +13,9 @@
     "@react-native-community/image-editor": "^4.3.0",
     "react": "19.0.0",
     "react-native": "0.79.2",
+    "react-native-color-matrix-image-filters": "^8.0.2",
     "react-native-fs": "^2.20.0",
+    "react-native-view-shot": "^5.1.1",
     "sn-plugin-lib": "^0.1.19"
   },
   "devDependencies": {
