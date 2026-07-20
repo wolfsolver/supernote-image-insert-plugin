@@ -22,6 +22,8 @@ The plugin includes a custom cropping interface specifically designed for the Su
   * **Insert Original**: Skip cropping and insert the full image as-is.
   * **Crop and Insert**: Process and insert only the selected area.
 
+  See croping in action: https://1drv.ms/v/c/6958bccc4c47c1d3/IQAW38Ra7zoXQZSCLdO5QA63ASRA429byBqCNgyZWexGpaM?e=r0vXTM
+
 ## Prerequisites
 * **React Native**: 0.79.2
 * **SDK**: `sn-plugin-lib`
@@ -29,11 +31,21 @@ The plugin includes a custom cropping interface specifically designed for the Su
 
 After clone run `npm install`.
 
+### Additional requirement for SuperNote
+* Android NDK installed: 27.0.12077973
+* Android SDK installed 
+  * `build-tools;35.0.0`
+  * `platforms;android-35`
+* Java JDK 
+* JAVA_HOME set
+* ANDROID_HOME set
+
 ## Screenshots
 
 | Folder Navigation | File Picker | Cropping Tool |
 | :---: | :---: | :---: |
-| ![folder](/screenshot/folder_navigation.png) | ![file picker](/screenshot/file_picker.png) | ![cropping](/screenshot/cropping.png) |
+| ![folder](/screenshot/folder_navigation.png) | ![file picker](/screenshot/file_picker.png) | ![cropping](/
+screenshot/cropping.png) |
 
 | Result (Full) | Result (Cropped) |
 | :---: | :---: |

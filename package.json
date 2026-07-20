@@ -1,6 +1,6 @@
 {
   "name": "insert_image",
-  "version": "0.0.1",
+  "version": "0.1.4",
   "private": true,
   "scripts": {
     "android": "react-native run-android",

@@ -1,0 +1,65 @@
+name: Build and Release Plugin
+
+on:
+  push:
+    branches:
+      - prod
+
+permissions:
+  contents: write # Permesso strettamente necessario per creare il tag e la release
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Lo script esegue "npx react-native bundle", serve Node.js
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18' 
+
+      # Lo script usa ./gradlew per buildare l'APK, serve il JDK
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Install dependencies
+        run: npm install 
+
+      - name: Make script executable
+        run: chmod +x ./buildPlugin.sh
+
+      - name: Execute build script
+        run: ./buildPlugin.sh
+
+      - name: Extract Info and Rename Outputs
+        id: prepare_release
+        run: |
+          PKG_NAME=$(jq -r '.name' package.json)          
+          VERSION=$(jq -r '.versionName' PluginConfig.json)          
+          
+          echo "PKG_NAME=$PKG_NAME" >> $GITHUB_ENV
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "TAG_NAME=v$VERSION" >> $GITHUB_ENV
+          
+          cd build/outputs
+          mv "${PKG_NAME}.snplg" "${PKG_NAME}_${VERSION}.snplg"
+          mv "${PKG_NAME}.zip" "${PKG_NAME}_${VERSION}.zip"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.TAG_NAME }}
+          name: Release ${{ env.TAG_NAME }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          files: |
+            build/outputs/${{ env.PKG_NAME }}_${{ env.VERSION }}.snplg
+            build/outputs/${{ env.PKG_NAME }}_${{ env.VERSION }}.zip

@@ -35,6 +35,7 @@ export const FilePicker: React.FC<FilePickerProps> = ({
 }) => {
   const [currentPath, setCurrentPath] = useState(initialDirectory);
   const [items, setItems] = useState<{ name: string, path: string, isDir: boolean }[]>([]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
     loadItems(currentPath);
@@ -42,6 +43,7 @@ export const FilePicker: React.FC<FilePickerProps> = ({
 
   const loadItems = async (path: string) => {
     try {
+      setIsRefreshing(true);
       const result = await RNFS.readDir(path);
       if (!result || !Array.isArray(result)) {
         setItems([]);
@@ -73,6 +75,8 @@ export const FilePicker: React.FC<FilePickerProps> = ({
       setItems(mappedItems);
     } catch (err) {
       console.error("Error reading directory:", err);
+    } finally {
+      setIsRefreshing(false);
     }
   };
 
@@ -126,9 +130,20 @@ export const FilePicker: React.FC<FilePickerProps> = ({
           </Text>
         </View>
 
-        <Pressable onPress={onClose} style={styles.closeBtn}>
-          <Text style={styles.navBtn}>✕</Text>
-        </Pressable>
+        <View style={styles.rightNav}>
+          <Pressable
+            onPress={() => loadItems(currentPath)}
+            style={styles.refreshBtn}
+            disabled={isRefreshing}
+          >
+            <Text style={[styles.navBtn, isRefreshing && { color: '#ccc' }]}>
+              {isRefreshing ? '⏳' : '🔄'}
+            </Text>
+          </Pressable>
+          <Pressable onPress={onClose} style={styles.closeBtn}>
+            <Text style={styles.navBtn}>✕</Text>
+          </Pressable>
+        </View>
       </View>
 
       <FlatList
@@ -163,6 +178,8 @@ const styles = StyleSheet.create({
   },
   navBtn: { fontSize: 22, fontWeight: 'bold' },
   backBtn: { padding: 5 },
+  rightNav: { flexDirection: 'row', alignItems: 'center' },
+  refreshBtn: { padding: 5, marginRight: 10 },
   closeBtn: { padding: 5 },
   pathTitle: {
     fontSize: 20, // Set to 20px for maximum readability
