@@ -1,9 +1,7 @@
 name: Build and Release Plugin
 
 on:
-  push:
-    branches:
-      - prod
+  workflow_dispatch:
 
 permissions:
   contents: write # Permesso strettamente necessario per creare il tag e la release
