@@ -1,6 +1,6 @@
 {
   "name": "insert_image",
-  "version": "0.1.4",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "android": "react-native run-android",
@@ -13,7 +13,9 @@
     "@react-native-community/image-editor": "^4.3.0",
     "react": "19.0.0",
     "react-native": "0.79.2",
+    "react-native-color-matrix-image-filters": "^8.0.2",
     "react-native-fs": "^2.20.0",
+    "react-native-view-shot": "^5.1.1",
     "sn-plugin-lib": "^0.1.19"
   },
   "devDependencies": {

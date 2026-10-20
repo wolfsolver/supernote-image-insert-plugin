@@ -9,6 +9,7 @@ import {
   Dimensions,
 } from 'react-native';
 import RNFS from 'react-native-fs';
+import { PluginManager } from 'sn-plugin-lib';
 
 // Configure 3 columns
 const numColumns = 3;
@@ -41,9 +42,33 @@ export const FilePicker: React.FC<FilePickerProps> = ({
     loadItems(currentPath);
   }, [currentPath]);
 
+  const ensureReadPermission = async (): Promise<boolean> => {
+    try {
+      const permission = 'plugin.permission.FILE:READ';
+      const status = await PluginManager.hasPermission(permission);
+      if (status === 1 || status === 2) {
+        return true;
+      }
+      const result = await PluginManager.requestPermission(
+        permission,
+        'Read permission is required to browse and select image files.'
+      );
+      return result === 1 || result === 2;
+    } catch (err) {
+      console.error('Error requesting read permission:', err);
+      return false;
+    }
+  };
+
   const loadItems = async (path: string) => {
     try {
       setIsRefreshing(true);
+      const hasPermission = await ensureReadPermission();
+      if (!hasPermission) {
+        console.error("Read permission not granted");
+        setItems([]);
+        return;
+      }
       const result = await RNFS.readDir(path);
       if (!result || !Array.isArray(result)) {
         setItems([]);

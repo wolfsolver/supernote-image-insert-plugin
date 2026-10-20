@@ -50,3 +50,7 @@ screenshot/cropping.png) |
 | Result (Full) | Result (Cropped) |
 | :---: | :---: |
 | ![result](/screenshot/image_in_note.png) | ![insert_crop](/screenshot/insert_crop.png) |
+
+| Colored | BW |
+| :---: | :---: |
+| ![Colored](/screenshot/20260720_131159.png) | ![BW](/screenshot/20260720_131209.png) |
