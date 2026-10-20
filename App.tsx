@@ -42,6 +42,25 @@ function App(): React.JSX.Element {
   useEffect(() => {
     const initPlugin = async () => {
       try {
+        // Request required permissions on plugin startup
+        const readPermission = 'plugin.permission.FILE:READ';
+        const readStatus = await PluginManager.hasPermission(readPermission);
+        if (readStatus !== 1 && readStatus !== 2) {
+          await PluginManager.requestPermission(
+            readPermission,
+            'Read permission is required to browse and select image files.'
+          );
+        }
+
+        const writePermission = 'plugin.permission.FILE:WRITE';
+        const writeStatus = await PluginManager.hasPermission(writePermission);
+        if (writeStatus !== 1 && writeStatus !== 2) {
+          await PluginManager.requestPermission(
+            writePermission,
+            'Write permission is required to insert images into notes.'
+          );
+        }
+
         let pageSize = { width: DEFAULT_WIDTH, height: DEFAULT_HEIGHT };
         const pathRes = await PluginCommAPI.getCurrentFilePath() as any;
         const pageRes = await PluginCommAPI.getCurrentPageNum() as any;
